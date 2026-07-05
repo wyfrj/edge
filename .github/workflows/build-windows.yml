@@ -7,11 +7,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  CR_DIR: C:\src\chromium
-  CR_SRC_DIR: C:\src\chromium\src
-  THORIUM_DIR: C:\src\thorium
-
 jobs:
   build:
     runs-on: windows-2022
@@ -25,7 +20,6 @@ jobs:
 
       - name: Free disk space
         run: |
-          # Remove unnecessary tools to free space
           Remove-Item -Recurse -Force "C:\Program Files\dotnet" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "C:\Program Files\Android" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "C:\Program Files\Microsoft SQL Server" -ErrorAction SilentlyContinue
@@ -37,21 +31,19 @@ jobs:
           Invoke-WebRequest -Uri $url -OutFile "C:\src\depot_tools.zip"
           Expand-Archive -Path "C:\src\depot_tools.zip" -DestinationPath "C:\src"
           Remove-Item "C:\src\depot_tools.zip"
+          # Persist PATH for subsequent steps
+          "C:\src\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Persist env vars
+          "DEPOT_TOOLS_WIN_TOOLCHAIN=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         shell: pwsh
 
       - name: Run gclient
-        run: |
-          set PATH=C:\src\depot_tools;%PATH%
-          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
-          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
-          gclient
+        run: gclient
         shell: cmd
 
       - name: Fetch Chromium source
         run: |
-          set PATH=C:\src\depot_tools;%PATH%
-          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
-          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           mkdir C:\src\chromium
           cd C:\src\chromium
           fetch chromium --no-history
@@ -59,9 +51,6 @@ jobs:
 
       - name: Run setup scripts
         run: |
-          set PATH=C:\src\depot_tools;%PATH%
-          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
-          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           cd C:\src\chromium\src
           bash %GITHUB_WORKSPACE%/thorium/trunk.sh
           bash %GITHUB_WORKSPACE%/thorium/version.sh
@@ -70,18 +59,12 @@ jobs:
 
       - name: Configure build
         run: |
-          set PATH=C:\src\depot_tools;%PATH%
-          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
-          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           cd C:\src\chromium\src
           gn args out\thorium --args="is_official_build=true is_debug=false is_component_build=false blink_symbol_level=0 symbol_level=0 chrome_pgo_phase=0 treat_warnings_as_errors=false enable_nacl=false proprietary_code=true ffmpeg_branding=\"Chrome\" use_proprietary_codecs=true enable_hangout_services_extension=true enable_widevine=true is_multi_dll_monolithic=false use_thin_lto=true clang_use_chrome_plugins=false use_lld=true"
         shell: cmd
 
       - name: Build
         run: |
-          set PATH=C:\src\depot_tools;%PATH%
-          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
-          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           cd C:\src\chromium\src
           autoninja -C out\thorium chrome chromedriver mini_installer -j4
         shell: cmd
