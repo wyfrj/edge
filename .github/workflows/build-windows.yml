@@ -33,62 +33,57 @@ jobs:
       - name: Install depot_tools
         run: |
           $url = "https://storage.googleapis.com/chrome-infra/depot_tools.zip"
-          $dest = "C:\src\depot_tools"
           New-Item -ItemType Directory -Path "C:\src" -Force
           Invoke-WebRequest -Uri $url -OutFile "C:\src\depot_tools.zip"
           Expand-Archive -Path "C:\src\depot_tools.zip" -DestinationPath "C:\src"
           Remove-Item "C:\src\depot_tools.zip"
-          # Add to PATH
-          $env:PATH = "C:\src\depot_tools;$env:PATH"
-          [Environment]::SetEnvironmentVariable("PATH", "C:\src\depot_tools;$([Environment]::GetEnvironmentVariable('PATH', 'Machine'))", "Machine")
-          # Set environment variables
-          [Environment]::SetEnvironmentVariable("DEPOT_TOOLS_WIN_TOOLCHAIN", "0", "Machine")
-          [Environment]::SetEnvironmentVariable("vs2022_install", "C:\Program Files\Microsoft Visual Studio\2022\Enterprise", "Machine")
         shell: pwsh
 
       - name: Run gclient
         run: |
-          $env:PATH = "C:\src\depot_tools;$env:PATH"
+          set PATH=C:\src\depot_tools;%PATH%
+          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
+          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           gclient
         shell: cmd
 
       - name: Fetch Chromium source
         run: |
-          $env:PATH = "C:\src\depot_tools;$env:PATH"
-          mkdir C:\src\chromium -Force
+          set PATH=C:\src\depot_tools;%PATH%
+          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
+          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
+          mkdir C:\src\chromium
           cd C:\src\chromium
           fetch chromium --no-history
-          cd src
         shell: cmd
 
-      - name: Run trunk.sh
-        working-directory: ${{ env.THORIUM_DIR }}
+      - name: Run setup scripts
         run: |
-          bash ./trunk.sh
-        shell: bash
-
-      - name: Run version.sh
-        working-directory: ${{ env.THORIUM_DIR }}
-        run: |
-          bash ./version.sh
-        shell: bash
-
-      - name: Run setup.sh
-        working-directory: ${{ env.THORIUM_DIR }}
-        run: |
-          bash ./setup.sh
-        shell: bash
+          set PATH=C:\src\depot_tools;%PATH%
+          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
+          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
+          cd C:\src\chromium\src
+          bash %GITHUB_WORKSPACE%/thorium/trunk.sh
+          bash %GITHUB_WORKSPACE%/thorium/version.sh
+          bash %GITHUB_WORKSPACE%/thorium/setup.sh
+        shell: cmd
 
       - name: Configure build
         run: |
+          set PATH=C:\src\depot_tools;%PATH%
+          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
+          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           cd C:\src\chromium\src
-          C:\src\depot_tools\gn args out\thorium --args="is_official_build=true is_debug=false is_component_build=false blink_symbol_level=0 symbol_level=0 chrome_pgo_phase=0 treat_warnings_as_errors=false enable_nacl=false proprietary_code=true ffmpeg_branding=\"Chrome\" use_proprietary_codecs=true enable_hangout_services_extension=true enable_widevine=true is_multi_dll_monolithic=false use_thin_lto=true chrome_pgo_phase=0 clang_use_chrome_plugins=false use_lld=true"
+          gn args out\thorium --args="is_official_build=true is_debug=false is_component_build=false blink_symbol_level=0 symbol_level=0 chrome_pgo_phase=0 treat_warnings_as_errors=false enable_nacl=false proprietary_code=true ffmpeg_branding=\"Chrome\" use_proprietary_codecs=true enable_hangout_services_extension=true enable_widevine=true is_multi_dll_monolithic=false use_thin_lto=true clang_use_chrome_plugins=false use_lld=true"
         shell: cmd
 
       - name: Build
         run: |
+          set PATH=C:\src\depot_tools;%PATH%
+          set DEPOT_TOOLS_WIN_TOOLCHAIN=0
+          set vs2022_install=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
           cd C:\src\chromium\src
-          C:\src\depot_tools\autoninja -C out\thorium chrome chromedriver mini_installer -j4
+          autoninja -C out\thorium chrome chromedriver mini_installer -j4
         shell: cmd
 
       - name: Upload artifacts
