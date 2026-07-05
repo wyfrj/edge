@@ -29,11 +29,6 @@ jobs:
           Remove-Item -Recurse -Force "C:\Program Files\dotnet" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "C:\Program Files\Android" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "C:\Program Files\Microsoft SQL Server" -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*\bin\Hostarm64" -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*\lib\arm64" -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*\include\arm64" -ErrorAction SilentlyContinue
-          # Clean up
-          Clean-Volume -ErrorAction SilentlyContinue
 
       - name: Install depot_tools
         run: |
