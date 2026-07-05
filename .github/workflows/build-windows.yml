@@ -1,0 +1,107 @@
+name: Build Thorium for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CR_DIR: C:\src\chromium
+  CR_SRC_DIR: C:\src\chromium\src
+  THORIUM_DIR: C:\src\thorium
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Thorium
+        uses: actions/checkout@v4
+        with:
+          path: thorium
+
+      - name: Free disk space
+        run: |
+          # Remove unnecessary tools to free space
+          Remove-Item -Recurse -Force "C:\Program Files\dotnet" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "C:\Program Files\Android" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "C:\Program Files\Microsoft SQL Server" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*\bin\Hostarm64" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*\lib\arm64" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*\include\arm64" -ErrorAction SilentlyContinue
+          # Clean up
+          Clean-Volume -ErrorAction SilentlyContinue
+
+      - name: Install depot_tools
+        run: |
+          $url = "https://storage.googleapis.com/chrome-infra/depot_tools.zip"
+          $dest = "C:\src\depot_tools"
+          New-Item -ItemType Directory -Path "C:\src" -Force
+          Invoke-WebRequest -Uri $url -OutFile "C:\src\depot_tools.zip"
+          Expand-Archive -Path "C:\src\depot_tools.zip" -DestinationPath "C:\src"
+          Remove-Item "C:\src\depot_tools.zip"
+          # Add to PATH
+          $env:PATH = "C:\src\depot_tools;$env:PATH"
+          [Environment]::SetEnvironmentVariable("PATH", "C:\src\depot_tools;$([Environment]::GetEnvironmentVariable('PATH', 'Machine'))", "Machine")
+          # Set environment variables
+          [Environment]::SetEnvironmentVariable("DEPOT_TOOLS_WIN_TOOLCHAIN", "0", "Machine")
+          [Environment]::SetEnvironmentVariable("vs2022_install", "C:\Program Files\Microsoft Visual Studio\2022\Enterprise", "Machine")
+        shell: pwsh
+
+      - name: Run gclient
+        run: |
+          $env:PATH = "C:\src\depot_tools;$env:PATH"
+          gclient
+        shell: cmd
+
+      - name: Fetch Chromium source
+        run: |
+          $env:PATH = "C:\src\depot_tools;$env:PATH"
+          mkdir C:\src\chromium -Force
+          cd C:\src\chromium
+          fetch chromium --no-history
+          cd src
+        shell: cmd
+
+      - name: Run trunk.sh
+        working-directory: ${{ env.THORIUM_DIR }}
+        run: |
+          bash ./trunk.sh
+        shell: bash
+
+      - name: Run version.sh
+        working-directory: ${{ env.THORIUM_DIR }}
+        run: |
+          bash ./version.sh
+        shell: bash
+
+      - name: Run setup.sh
+        working-directory: ${{ env.THORIUM_DIR }}
+        run: |
+          bash ./setup.sh
+        shell: bash
+
+      - name: Configure build
+        run: |
+          cd C:\src\chromium\src
+          C:\src\depot_tools\gn args out\thorium --args="is_official_build=true is_debug=false is_component_build=false blink_symbol_level=0 symbol_level=0 chrome_pgo_phase=0 treat_warnings_as_errors=false enable_nacl=false proprietary_code=true ffmpeg_branding=\"Chrome\" use_proprietary_codecs=true enable_hangout_services_extension=true enable_widevine=true is_multi_dll_monolithic=false use_thin_lto=true chrome_pgo_phase=0 clang_use_chrome_plugins=false use_lld=true"
+        shell: cmd
+
+      - name: Build
+        run: |
+          cd C:\src\chromium\src
+          C:\src\depot_tools\autoninja -C out\thorium chrome chromedriver mini_installer -j4
+        shell: cmd
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chromium-windows-x64
+          path: |
+            C:\src\chromium\src\out\thorium\chrome.exe
+            C:\src\chromium\src\out\thorium\mini_installer.exe
+            C:\src\chromium\src\out\thorium\chromedriver.exe
+          retention-days: 7

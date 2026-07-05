@@ -1,0 +1,15 @@
+﻿# Chromium Portable for Linux README
+
+## Copyright (c) 2026 Alex313031
+
+This is a portable build of Chromium which can also be used to install/use Chromium on Linux distros that do not use .deb packages. The Chromium-PORTABLE script and Chromium-SHELL script will need to be made executable with `sudo chmod +x`, and when run will disable logging, default browser check, and set the user data dir to .config/Chromium in this folder rather than the usual $HOME/.config/Chromium folder.
+
+The .desktop files are the equivalents, however one needs to make a symlink to them in either ~/.local/share/applications or /usr/share/applications.
+One can also directly copy them to one of these locations, and manually edit all the Exec= lines within them to point to wherever you unpacked this Chromium archive; I.E. instead of Exec=./Chromium and Exec./Chromium_shell I have it set on my machine to Exec=/home/alex/bin/Chromium/Chromium and Exec=/home/alex/bin/Chromium/Chromium_shell. Full paths are needed (no ~/ or $HOME)
+
+The same can be done for the Icon lines, so that they point to the correct locations and show an actual icon.
+The Chromium_shell.png is for setting the icon for Chromium-shell.desktop
+
+Thanks for using Chromium and feel free to use the issues or discussions for problems, questions, features, or suggestions.
+
+	- Alex313031
